@@ -4,6 +4,12 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.model_selection import StratifiedShuffleSplit, train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import GridSearchCV
+from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVR
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.metrics import accuracy_score
 
 # Read the data from the CSV file
 df = pd.read_csv('Project_1_Data.csv')
@@ -58,20 +64,26 @@ plt.ylabel('Step Number')
 plt.title('Scatter Plot of Z Coordinate vs Step Number')
 plt.show()
 
-# Initialize the scaler (choose one: MinMaxScaler or StandardScaler)
+# Initialize the scaler 
 scaler = StandardScaler()
 
-# Fit and transform the features
-X_scaled = scaler.fit_transform(X)
+# Fit the scaler on the training data
+X_train_scaled = scaler.fit_transform(X_train)
 
-# Convert the scaled features back to a DataFrame
-X_scaled_df = pd.DataFrame(X_scaled, columns=['x', 'y', 'z'])
+# Transform the test data using the same scaler
+X_test_scaled = scaler.transform(X_test)
+                                 
+# Convert the scaled features back to DataFrames
+X_train_scaled_df = pd.DataFrame(X_train_scaled, columns=['X', 'Y', 'Z'])
+X_test_scaled_df = pd.DataFrame(X_test_scaled, columns=['X', 'Y', 'Z'])
 
-# Add the target variable back to the DataFrame
-X_scaled_df['step'] = y
+# Add the target variable back to the DataFrames
+X_train_scaled_df['Step'] = y_train.reset_index(drop=True)
+X_test_scaled_df['Step'] = y_test.reset_index(drop=True)
+
 
 # Calculate the correlation matrix
-corr_matrix = X_scaled_df.corr()
+corr_matrix = X_train_scaled_df.corr()
 # Plot the heatmap
 plt.figure(figsize=(10, 8))
 sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', vmin=-1, vmax=1)
@@ -80,4 +92,34 @@ sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', vmin=-1, vmax=1)
 plt.title('Correlation Matrix Heatmap')
 plt.show()
 
+#Support Vector Machine (SVM)
+svr = SVR()
+param_grid_svr = {
+    'kernel': ['linear', 'rbf'],
+    'C': [1],
+    'gamma': ['scale', 'auto']
+}
+grid_search_svr = GridSearchCV(svr, param_grid_svr, cv=5, scoring='neg_mean_absolute_error', n_jobs=-1)
+grid_search_svr.fit(X_train, y_train)
+best_model_svr = grid_search_svr.best_estimator_
+print("Best SVM Model:", best_model_svr)
 
+#Linear Regression
+linear_reg = LinearRegression()
+param_grid_lr = {}  # No hyperparameters to tune for plain linear regression, but you still apply GridSearchCV.
+grid_search_lr = GridSearchCV(linear_reg, param_grid_lr, cv=5, scoring='neg_mean_absolute_error', n_jobs=-1)
+grid_search_lr.fit(X_train, y_train)
+best_model_lr = grid_search_lr.best_estimator_
+print("Best Linear Regression Model:", best_model_lr)
+
+# Decision Tree
+decision_tree = DecisionTreeRegressor(random_state=42)
+param_grid_dt = {
+    'max_depth': [None, 10, 20, 30],
+    'min_samples_split': [3, 7, 10],
+    'min_samples_leaf': [1, 2, 3]
+}
+grid_search_dt = GridSearchCV(decision_tree, param_grid_dt, cv=5, scoring='neg_mean_absolute_error', n_jobs=-1)
+grid_search_dt.fit(X_train, y_train)
+best_model_dt = grid_search_dt.best_estimator_
+print("Best Decision Tree Model:", best_model_dt)
