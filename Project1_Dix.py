@@ -3,6 +3,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.model_selection import StratifiedShuffleSplit, train_test_split
+from sklearn.preprocessing import StandardScaler
 
 # Read the data from the CSV file
 df = pd.read_csv('Project_1_Data.csv')
@@ -56,4 +57,27 @@ plt.xlabel('Z Coordinate')
 plt.ylabel('Step Number')
 plt.title('Scatter Plot of Z Coordinate vs Step Number')
 plt.show()
+
+# Initialize the scaler (choose one: MinMaxScaler or StandardScaler)
+scaler = StandardScaler()
+
+# Fit and transform the features
+X_scaled = scaler.fit_transform(X)
+
+# Convert the scaled features back to a DataFrame
+X_scaled_df = pd.DataFrame(X_scaled, columns=['x', 'y', 'z'])
+
+# Add the target variable back to the DataFrame
+X_scaled_df['step'] = y
+
+# Calculate the correlation matrix
+corr_matrix = X_scaled_df.corr()
+# Plot the heatmap
+plt.figure(figsize=(10, 8))
+sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', vmin=-1, vmax=1)
+
+# Add labels and title
+plt.title('Correlation Matrix Heatmap')
+plt.show()
+
 
