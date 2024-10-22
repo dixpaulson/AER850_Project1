@@ -11,6 +11,9 @@ from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import f1_score, precision_score, accuracy_score, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import classification_report
+from sklearn.ensemble import StackingClassifier
+import joblib
 
 # Read the data from the CSV file
 df = pd.read_csv('Project_1_Data.csv')
@@ -75,74 +78,101 @@ sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', vmin=-1, vmax=1)
 plt.title('Correlation Matrix Heatmap')
 plt.show()
 
-# Define the models and their hyperparameters for GridSearchCV
-models = {
-    'Logistic Regression': {
-        'model': LogisticRegression(),
-        'params': {
-            'C': [0.1, 1, 10],
-            'solver': ['liblinear']
-        }
-    },
-    'Random Forest': {
-        'model': RandomForestClassifier(),
-        'params': {
-            'n_estimators': [10, 50, 100],
-            'max_features': ['auto', 'sqrt', 'log2']
-        }
-    },
-    'SVM': {
-        'model': SVC(),
-        'params': {
-            'C': [0.1, 1, 10],
-            'kernel': ['linear', 'rbf']
-        }
-    }
-}
+# Logistic Regression Model
+log_reg = LogisticRegression()
+param_grid_log_reg = {'C': [10]}                                                    # HyperParameters for LogReg
+grid_search_log_reg = GridSearchCV(log_reg, param_grid_log_reg, cv=5)               # GridSearch for LogRegression
+grid_search_log_reg.fit(X_train, y_train)
+best_model_log_reg = grid_search_log_reg.best_estimator_                            # Find best hyperparameter to tune based on grid search
+print("Best Logistic Regression Model:", best_model_log_reg)
+y_pred_log_reg = grid_search_log_reg.predict(X_test)                                # Evaluate performance of the models on the test set
+acc_log_reg = accuracy_score(y_test, y_pred_log_reg)                                # Calculate accuracy
+print(f'Logistic Regression Accuracy: {acc_log_reg}')                               # Print Log Reg accuracy
+print("Logistic Regression Classification Report")                                  # Model Performance Analysis
+print(classification_report(y_test, y_pred_log_reg))                                # Evaluate the Logistic Regression model
 
-# Perform GridSearchCV for each model
-best_models = {}
-for model_name, model_info in models.items():
-    grid_search = GridSearchCV(model_info['model'], model_info['params'], cv=5, scoring='f1')
-    grid_search.fit(X_train, y_train)
-    best_models[model_name] = grid_search.best_estimator_
+# Support Vector Matrix Model
+svc = SVC()
+param_grid_svc = {'C': [10], 'kernel': ['linear']}                           # Set Hyperparameters for SVC
+grid_search_svc = GridSearchCV(svc, param_grid_svc, cv=5)                           # GridSearch for SVC
+grid_search_svc.fit(X_train, y_train)
+best_model_svc = grid_search_svc.best_estimator_                                    # Find best hyperparameter to tune based on grid search
+print("Best SVC Model:", best_model_svc)
+y_pred_svc = grid_search_svc.predict(X_test)                                        # Evaluate performance of the models on the test set
+acc_svc = accuracy_score(y_test, y_pred_svc)                                        # Calculate accuracy
+print(f'SVC Accuracy: {acc_svc}')                                                   # Print accuracy
+print("SVC Classification Report")                                                  # Model Performance Analysis                                                  
+print(classification_report(y_test, y_pred_svc))                                    # Evaluate the SVC model
 
-# Perform RandomizedSearchCV for one model (e.g., Random Forest)
-random_search = RandomizedSearchCV(RandomForestClassifier(), {
-    'n_estimators': [10, 50, 100, 200],
+#Random Forest Model
+random_forest = RandomForestClassifier()                                        
+param_grid_rf = {'n_estimators': [50], 'max_depth': [5]}           # Set Hyperparameters for Random Forest based on grid search
+grid_search_rf = GridSearchCV(random_forest, param_grid_rf, cv=5)                   # GridSearch for Random Forest
+grid_search_rf.fit(X_train, y_train)
+best_model_rf = grid_search_rf.best_estimator_                                      # Find best hyperparameter to tune
+print("Best Random Forest Model:", best_model_rf)
+y_pred_rf = grid_search_rf.predict(X_test)                                          # Evaluate performance of the models on the test set
+acc_rf = accuracy_score(y_test, y_pred_rf)                                          # Calculate accuracy
+print(f'Random Forest Accuracy: {acc_rf}')                                          # Print accuracy
+print("Random Forest Classification Report")                                        # Model Performance Analysis 
+print(classification_report(y_test, y_pred_rf))                                     # Evaluate the Random Forest model
+
+
+# RandomizedSeachCV
+param_dist_rf = {
+    'n_estimators': [10],
     'max_features': ['auto', 'sqrt', 'log2'],
-    'max_depth': [None, 10, 20, 30],
-    'min_samples_split': [2, 5, 10],
-    'min_samples_leaf': [1, 2, 4]
-}, n_iter=10, cv=5, scoring='f1', random_state=42)
-random_search.fit(X_train, y_train)
-best_models['Random Forest (Randomized)'] = random_search.best_estimator_
+    'max_depth': [30],
+    'min_samples_split': [10],
+    'min_samples_leaf': [4]
+}
+random_search_rf = RandomizedSearchCV(random_forest, param_dist_rf, n_iter=10, cv=5, random_state=42)
+random_search_rf.fit(X_train, y_train)
+best_model_random_search_rf = random_search_rf.best_estimator_                      # Find best hyperparameter to tune
+print("Best Randomized Search Model:", best_model_random_search_rf)
+y_pred_random_search_rf = random_search_rf.predict(X_test)                          # Evaluate performance of the models on the test set
+acc_random_search_rf = accuracy_score(y_test, y_pred_random_search_rf)              # Calculate accuracy
+print(f'Random Forest Randomized Search Accuracy: {acc_random_search_rf}')          # Print accuracy
+print("Random Forest Randomized Search Classification Report ")                     # Model Performance Analysis
+print(classification_report(y_test, y_pred_random_search_rf))                       # Evaluate the Random Forest model
 
-# Evaluate the models
-results = {}
-for model_name, model in best_models.items():
-    y_pred = model.predict(X_test)
-    results[model_name] = {
-        'f1_score': f1_score(y_test, y_pred, average='weighted'),
-        'precision': precision_score(y_test, y_pred, average='weighted'),
-        'accuracy': accuracy_score(y_test, y_pred)
-    }
+#Confusion Matrix for the best model which is Random Forest
+conf_matrix_rf = confusion_matrix(y_test, y_pred_rf)
 
-# Print the results
-for model_name, metrics in results.items():
-    print(f"{model_name}:")
-    print(f"  F1 Score: {metrics['f1_score']:.4f}")
-    print(f"  Precision: {metrics['precision']:.4f}")
-    print(f"  Accuracy: {metrics['accuracy']:.4f}")
+# Plot the confusion matrix
+plt.figure(figsize=(8, 6))
+sns.heatmap(conf_matrix_rf, annot=True, fmt='d', cmap='Blues', cbar=False)
+plt.title('Confusion Matrix for Random Forest')
+plt.xlabel('Predicted')
+plt.ylabel('Actual')
+plt.show()
 
-# Select the best model based on F1 score
-best_model_name = max(results, key=lambda k: results[k]['f1_score'])
-best_model = best_models[best_model_name]
 
-# Create a confusion matrix for the best model
-y_pred_best = best_model.predict(X_test)
-cm = confusion_matrix(y_test, y_pred_best)
-disp = ConfusionMatrixDisplay(confusion_matrix=cm)
-disp.plot()
-plt.title(f'Confusion Matrix for {best_model_name}')
+# Stacked Model Performance Analysis
+# Define the base models using the best estimators from grid search
+base_estimators = [
+    ('rf', grid_search_rf.best_estimator_),  # Best Random Forest model
+    ('svc', grid_search_svc.best_estimator_)  # Best SVC model
+]
+
+# Create the Stacking Classifier with Logistic Regression as the final estimator
+stacked_model = StackingClassifier(estimators=base_estimators, final_estimator=LogisticRegression())
+
+# Train the stacked model on the training data
+stacked_model.fit(X_train, y_train)
+
+# Predict on the test data using the stacked model
+y_pred_stacked = stacked_model.predict(X_test)
+
+# Evaluate the performance of the stacked model
+print("Stacked Model Classification Report")
+print(classification_report(y_test, y_pred_stacked))
+
+# Generate and plot the confusion matrix for the stacked model
+conf_matrix_stacked = confusion_matrix(y_test, y_pred_stacked)
+plt.figure(figsize=(8, 6))
+sns.heatmap(conf_matrix_stacked, annot=True, fmt='d', cmap='Greens', cbar=False)
+plt.title('Confusion Matrix for Stacked Model')
+plt.xlabel('Predicted')
+plt.ylabel('Actual')
 plt.show()
