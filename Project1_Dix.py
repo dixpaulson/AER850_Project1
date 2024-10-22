@@ -176,3 +176,31 @@ plt.title('Confusion Matrix for Stacked Model')
 plt.xlabel('Predicted')
 plt.ylabel('Actual')
 plt.show()
+
+
+
+# Model Evaluation - Save the trained stacked model
+# Define the filename for the saved model
+model_filename = 'stacked_model.joblib'
+
+# Save the trained stacked model to a file
+joblib.dump(stacked_model, model_filename)
+print(f"Model has been saved as {model_filename}")
+
+# Load the saved model from the file
+loaded_model = joblib.load(model_filename)
+
+# Define new coordinate data for prediction
+new_coordinates = [
+    [9.375, 3.0625, 1.51],
+    [6.995, 5.125, 0.3875],
+    [0, 3.0625, 1.93],
+    [9.4, 3, 1.8],
+    [9.4, 3, 1.3]
+]
+
+# Predict maintenance steps for the new coordinates using the loaded model
+predictions = loaded_model.predict(new_coordinates)
+
+# Display the predictions
+print("Predicted Maintenance Steps for the new coordinates:", predictions)
